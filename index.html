@@ -3,96 +3,76 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Voice Mapping</title>
-  <meta name="description" content="A daily 60-second speaking practice.">
-  <meta name="theme-color" content="#F5F3EF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#15161A" media="(prefers-color-scheme: dark)">
+  <title>Voice Diary</title>
+  <meta name="description" content="A daily minute of speaking, kept like a diary.">
+  <meta name="theme-color" content="#F3ECE1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1E1915" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Voice Map">
+  <meta name="apple-mobile-web-app-title" content="Voice Diary">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,100;1,9..144,300..500,100&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="shell">
-  <nav class="sidebar" aria-label="Main">
-    <div class="brand"><span class="logo" aria-hidden="true"></span>Voice Mapping</div>
-    <button class="nav-item" data-nav="today" aria-current="page">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" class="fill"/></svg>
-      <span>Today</span>
-    </button>
-    <button class="nav-item" data-nav="history">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h9"/></svg>
-      <span>Past days</span>
-    </button>
-    <button class="nav-item" data-nav="settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
-      <span>Settings</span>
-    </button>
-    <p class="sync-line"><span class="sync-dot" id="sync-dot" aria-hidden="true"></span><span id="sync-short">On this device</span></p>
-  </nav>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="wordmark" href="./" aria-label="Voice Diary, today">Voice <em>Diary</em></a>
+      <nav class="nav" aria-label="Main">
+        <button class="nav-item" data-nav="today" aria-current="page">Today</button>
+        <button class="nav-item" data-nav="history">Entries</button>
+        <button class="nav-item" data-nav="settings">Settings</button>
+      </nav>
+    </div>
+  </header>
 
-  <main class="main" id="main">
+  <main class="page" id="main">
 
     <!-- TODAY -->
     <section class="screen" data-screen="today">
-      <header class="page-head">
-        <div>
-          <p class="eyebrow" id="today-date"></p>
-          <h1 class="page-title">Today</h1>
+      <p class="dateline"><span id="today-date"></span><span class="streak" id="streak-chip" hidden></span></p>
+
+      <p class="kicker" id="today-cat">Today's question</p>
+      <h1 class="question" id="today-question"></h1>
+
+      <div id="today-todo">
+        <div class="actions">
+          <button class="btn" id="begin-btn">Begin the minute</button>
+          <button class="link" id="skip-btn">Ask me something else</button>
         </div>
-        <p class="chip streak" id="streak-chip" hidden></p>
-      </header>
-
-      <div class="today-grid">
-        <article class="card question-card">
-          <p class="eyebrow" id="today-cat">Today's question</p>
-          <h2 class="question" id="today-question"></h2>
-
-          <div id="today-todo">
-            <div class="actions">
-              <button class="btn primary" id="begin-btn">Begin · 60 seconds</button>
-              <button class="btn ghost" id="skip-btn">Different question</button>
-            </div>
-          </div>
-
-          <div id="today-done" hidden>
-            <p class="done-badge">Done for today</p>
-            <div class="mini-player">
-              <button class="play" id="today-play" aria-label="Play today's recording"></button>
-              <p class="note-text" id="today-note"></p>
-            </div>
-            <div class="actions"><button class="btn ghost" id="redo-btn">Record again</button></div>
-          </div>
-        </article>
-
-        <aside class="side">
-          <article class="card soft-peach" id="focus-block" hidden>
-            <p class="eyebrow">Your focus today</p>
-            <p class="focus-text" id="focus-text"></p>
-          </article>
-          <article class="card">
-            <p class="eyebrow">Last 7 days</p>
-            <ol class="week" id="week"></ol>
-            <dl class="stats" id="stats"></dl>
-          </article>
-        </aside>
       </div>
+
+      <div id="today-done" hidden>
+        <p class="kept">Today's entry is written.</p>
+        <div class="listen-line">
+          <button class="play" id="today-play" aria-label="Play today's recording"></button>
+          <p class="note-line" id="today-note"></p>
+        </div>
+        <div class="actions"><button class="link" id="redo-btn">Record it again</button></div>
+      </div>
+
+      <aside class="focus" id="focus-block" hidden>
+        <svg class="sprig" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c14-6 24 4 38-1s22-6 36 0 26 4 42-2"/></svg>
+        <p class="kicker">Yesterday you wrote</p>
+        <p class="focus-text" id="focus-text"></p>
+      </aside>
     </section>
 
     <!-- READY -->
-    <section class="screen focus" data-screen="ready" hidden>
-      <p class="breathe">Breathe.<br>Notice where you are.</p>
+    <section class="screen hush" data-screen="ready" hidden>
+      <p class="breathe">Take a breath.<br><em>Notice where you are.</em></p>
       <p class="count" id="count" aria-live="assertive">3</p>
-      <button class="btn ghost" id="cancel-ready">Cancel</button>
+      <button class="link" id="cancel-ready">Not now</button>
     </section>
 
     <!-- SPEAK -->
-    <section class="screen focus" data-screen="speak" hidden>
-      <p class="rec-pill"><span></span>Recording</p>
+    <section class="screen hush" data-screen="speak" hidden>
+      <p class="recording"><span aria-hidden="true"></span>listening</p>
       <p class="speak-q" id="speak-question"></p>
       <div class="ring-wrap">
         <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
@@ -102,145 +82,125 @@
         <p class="secs" id="secs">60</p>
       </div>
       <p class="cue" id="cue" aria-live="polite">&nbsp;</p>
-      <button class="btn" id="finish-btn">Finish</button>
+      <button class="btn quiet" id="finish-btn">I'm finished</button>
     </section>
 
-    <!-- REVIEW (listen back + note) -->
+    <!-- REVIEW -->
     <section class="screen" data-screen="review" hidden>
-      <header class="page-head">
-        <div>
-          <p class="eyebrow">Listen back</p>
-          <h1 class="page-title review-q" id="review-question"></h1>
+      <p class="kicker">Listening back to</p>
+      <h1 class="question small" id="review-question"></h1>
+
+      <div class="player">
+        <button class="play big" id="review-play" aria-label="Play recording"></button>
+        <div class="scrub" id="review-scrub" role="slider" aria-label="Playback position" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="scrub-fill" id="scrub-fill"></div>
         </div>
-      </header>
+        <span class="time" id="review-time">0:00</span>
+      </div>
+      <button class="link" id="ending-btn">Hear just the last ten seconds</button>
 
-      <div class="review-grid">
-        <div class="col">
-          <article class="card">
-            <div class="player">
-              <button class="play big" id="review-play" aria-label="Play recording"></button>
-              <div class="wave-box">
-                <svg class="wave" id="review-wave" preserveAspectRatio="none" role="img" aria-label="Waveform of your recording"></svg>
-              </div>
-              <span class="time" id="review-time">0:00</span>
-            </div>
-            <div class="ending-row">
-              <button class="btn small" id="ending-btn">Hear your ending</button>
-              <div class="ending" id="ending" aria-live="polite"></div>
-            </div>
-            <p class="hint" id="pause-line"></p>
-          </article>
+      <div class="listen-for">
+        <p class="kicker">As you listen</p>
+        <p class="remind" id="review-focus" hidden>You meant to: <span id="review-focus-text"></span></p>
+        <ul class="pointers">
+          <li>Did you breathe before the first word?</li>
+          <li>Where did you lose the thread, if anywhere?</li>
+          <li>Did you let silences sit, or fill them?</li>
+          <li>Does the last sentence sound like an ending?</li>
+        </ul>
+      </div>
 
-          <article class="card">
-            <div class="card-head">
-              <p class="eyebrow">Transcript</p>
-              <dl class="tstats" id="tstats"></dl>
-            </div>
-            <p class="transcript" id="transcript"></p>
-            <p class="legend-line" id="t-legend"><span class="key last"></span>final thought <span class="key filler"></span>filler</p>
-          </article>
+      <hr class="rule">
+
+      <fieldset class="check">
+        <legend>Did you finish your last thought?</legend>
+        <div class="choices" id="finished-group">
+          <label><input type="radio" name="finished" value="yes"><span>Yes</span></label>
+          <label><input type="radio" name="finished" value="partly"><span>Partly</span></label>
+          <label><input type="radio" name="finished" value="no"><span>No</span></label>
         </div>
+      </fieldset>
 
-        <div class="col">
-          <article class="card">
-            <fieldset class="check">
-              <legend class="q-label">Did you finish your last thought?</legend>
-              <div class="seg" id="finished-group">
-                <label><input type="radio" name="finished" value="yes"><span>Yes</span></label>
-                <label><input type="radio" name="finished" value="partly"><span>Partly</span></label>
-                <label><input type="radio" name="finished" value="no"><span>No</span></label>
-              </div>
-            </fieldset>
-            <fieldset class="check">
-              <legend class="q-label">How present did you feel?</legend>
-              <div class="seg five" id="presence-group">
-                <label><input type="radio" name="presence" value="1"><span>1</span></label>
-                <label><input type="radio" name="presence" value="2"><span>2</span></label>
-                <label><input type="radio" name="presence" value="3"><span>3</span></label>
-                <label><input type="radio" name="presence" value="4"><span>4</span></label>
-                <label><input type="radio" name="presence" value="5"><span>5</span></label>
-              </div>
-              <p class="scale-ends"><span>Scattered</span><span>Fully here</span></p>
-            </fieldset>
-          </article>
-
-          <article class="card soft-peach">
-            <label class="q-label" for="note-input">One thing to improve tomorrow</label>
-            <textarea class="note-input" id="note-input" rows="3" maxlength="200" placeholder="Tomorrow I'll…"></textarea>
-            <p class="hint" id="note-hint">Keep it to one thing you can actually try.</p>
-          </article>
-
-          <div class="actions spread">
-            <button class="btn ghost" id="retake-btn">Record again</button>
-            <button class="btn primary" id="save-btn">Save</button>
-          </div>
+      <fieldset class="check">
+        <legend>How present were you?</legend>
+        <div class="choices" id="presence-group">
+          <label><input type="radio" name="presence" value="1"><span>1</span></label>
+          <label><input type="radio" name="presence" value="2"><span>2</span></label>
+          <label><input type="radio" name="presence" value="3"><span>3</span></label>
+          <label><input type="radio" name="presence" value="4"><span>4</span></label>
+          <label><input type="radio" name="presence" value="5"><span>5</span></label>
         </div>
+        <p class="scale-ends"><span>elsewhere</span><span>right here</span></p>
+      </fieldset>
+
+      <div class="dear">
+        <label for="note-input">Dear tomorrow,</label>
+        <textarea class="note-input" id="note-input" rows="3" maxlength="200" placeholder="one thing to try…"></textarea>
+        <p class="hint" id="note-hint">Just one thing.</p>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="save-btn">Keep this entry</button>
+        <button class="link" id="retake-btn">Record again</button>
       </div>
     </section>
 
     <!-- DONE -->
-    <section class="screen focus" data-screen="done" hidden>
-      <div class="done-mark" aria-hidden="true">✓</div>
-      <p class="breathe">Saved. See you tomorrow.</p>
-      <p class="focus-text" id="done-note"></p>
-      <button class="btn primary" id="done-btn">Back to today</button>
+    <section class="screen hush" data-screen="done" hidden>
+      <svg class="sprig big" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c14-6 24 4 38-1s22-6 36 0 26 4 42-2"/></svg>
+      <p class="breathe">Kept.<br><em>Until tomorrow.</em></p>
+      <p class="note-line" id="done-note"></p>
+      <button class="btn" id="done-btn">Close the diary</button>
     </section>
 
     <!-- HISTORY -->
     <section class="screen" data-screen="history" hidden>
-      <header class="page-head">
-        <div>
-          <p class="eyebrow" id="history-count"></p>
-          <h1 class="page-title">Past days</h1>
-        </div>
-      </header>
-      <div class="trend-grid" id="trend"></div>
+      <h1 class="title">Entries</h1>
+      <p class="sub" id="history-count"></p>
       <ol class="entries" id="entries"></ol>
     </section>
 
     <!-- SETTINGS -->
     <section class="screen" data-screen="settings" hidden>
-      <header class="page-head"><div><h1 class="page-title">Settings</h1></div></header>
-      <div class="settings-grid">
-        <article class="card">
-          <h2 class="card-title">Sync</h2>
-          <p class="hint" id="sync-status"></p>
-          <form id="auth-form" class="stack" hidden>
-            <label class="field">Email<input type="email" id="auth-email" autocomplete="username" required></label>
-            <label class="field">Password<input type="password" id="auth-pass" autocomplete="current-password" minlength="8" required></label>
-            <div class="actions">
-              <button class="btn primary" type="submit">Sign in</button>
-              <button class="btn ghost" type="button" id="signup-btn">Create account</button>
-            </div>
-          </form>
-          <div id="signed-in" class="actions" hidden>
-            <button class="btn" id="sync-now">Sync now</button>
-            <button class="btn ghost" id="signout-btn">Sign out</button>
+      <h1 class="title">Settings</h1>
+
+      <section class="setting">
+        <h2>Keeping it in sync</h2>
+        <p class="hint" id="sync-status"></p>
+        <form id="auth-form" class="form" hidden>
+          <label class="field">Email<input type="email" id="auth-email" autocomplete="username" required></label>
+          <label class="field">Password<input type="password" id="auth-pass" autocomplete="current-password" minlength="8" required></label>
+          <div class="actions">
+            <button class="btn" type="submit">Sign in</button>
+            <button class="link" type="button" id="signup-btn">Create an account</button>
           </div>
-        </article>
+        </form>
+        <div id="signed-in" class="actions" hidden>
+          <button class="btn quiet" id="sync-now">Sync now</button>
+          <button class="link" id="signout-btn">Sign out</button>
+        </div>
+        <p class="sync-line"><span class="sync-dot" id="sync-dot" aria-hidden="true"></span><span id="sync-short"></span></p>
+      </section>
 
-        <article class="card">
-          <h2 class="card-title">Your own questions</h2>
-          <form id="prompt-form" class="inline-form">
-            <label class="sr" for="prompt-input">Add a question</label>
-            <input class="text-input" id="prompt-input" maxlength="160" placeholder="Add a question…">
-            <button class="btn" type="submit">Add</button>
-          </form>
-          <ul class="mine" id="my-prompts"></ul>
-        </article>
+      <section class="setting">
+        <h2>Your own questions</h2>
+        <form id="prompt-form" class="inline-form">
+          <label class="sr" for="prompt-input">Add a question</label>
+          <input class="text-input" id="prompt-input" maxlength="160" placeholder="Write a question to be asked…">
+          <button class="btn quiet" type="submit">Add</button>
+        </form>
+        <ul class="mine" id="my-prompts"></ul>
+      </section>
 
-        <article class="card">
-          <h2 class="card-title">Backup</h2>
-          <p class="hint">Download every day and recording as one file.</p>
-          <div class="actions"><button class="btn" id="export-btn">Export everything</button></div>
-        </article>
-      </div>
+      <section class="setting">
+        <h2>A copy for safekeeping</h2>
+        <p class="hint">Every entry and recording, in one file.</p>
+        <div class="actions"><button class="btn quiet" id="export-btn">Export</button></div>
+      </section>
     </section>
   </main>
-</div>
 
-<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
-<audio id="audio" preload="auto" playsinline></audio>
-<script type="module" src="app.js"></script>
+  <audio id="audio" preload="auto" playsinline></audio>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

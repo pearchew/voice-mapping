@@ -1,14 +1,10 @@
 import { PROMPTS } from './prompts.js';
 import * as db from './db.js';
 import * as sync from './sync.js';
-import { createTranscriber, supported as speechSupported } from './speech.js';
-import { analyseAudio, analyseTranscript, renderTranscript, ENDING_COPY } from './analysis.js';
 
 const LIMIT = 60;          // seconds
 const CUE_AT = 50;         // "start landing your thought"
-const ENDING_SECS = 10;
 const RING_C = 2 * Math.PI * 86;
-const SVGNS = 'http://www.w3.org/2000/svg';
 
 const $ = (id) => document.getElementById(id);
 const audio = $('audio');
@@ -34,7 +30,6 @@ function toast(msg, ms = 2800) {
 }
 function hash(str) { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
-const svgEl = (tag, attrs = {}) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
 const allSessions = async () => (await db.all('sessions')).sort((a, b) => (a.date < b.date ? 1 : -1));
 
 let current = 'today';
@@ -78,7 +73,7 @@ async function renderToday() {
   todayPrompt = done ? { id: done.promptId, text: done.promptText, cat: '' } : await promptFor(today);
 
   $('today-date').textContent = fmtLong(today);
-  $('today-cat').textContent = todayPrompt.cat ? `Today's question · ${todayPrompt.cat}` : "Today's question";
+  $('today-cat').textContent = "Today's question";
   $('today-question').textContent = todayPrompt.text;
 
   const prev = sessions.find(s => s.date < today && s.note && s.note.trim());
@@ -92,34 +87,13 @@ async function renderToday() {
     $('today-play').onclick = (e) => playSession(done, e.currentTarget);
   }
 
-  // Streak + last 7 days
+  // Streak
   const dates = sessions.map(s => s.date);
   const streak = computeStreak(dates, today);
   const chip = $('streak-chip');
   chip.hidden = !streak;
-  chip.textContent = `${streak} day${streak === 1 ? '' : 's'} in a row`;
-  const set = new Set(dates);
-  const week = $('week');
-  week.innerHTML = '';
-  for (let i = 6; i >= 0; i--) {
-    const k = addDays(today, -i);
-    const li = document.createElement('li');
-    li.className = (set.has(k) ? 'on ' : '') + (i === 0 ? 'today' : '');
-    li.innerHTML = '<i></i>';
-    li.append(parseKey(k).toLocaleDateString(undefined, { weekday: 'narrow' }));
-    li.title = `${fmtShort(k)}: ${set.has(k) ? 'practised' : 'missed'}`;
-    week.append(li);
-  }
-
-  const recent = sessions.filter(s => s.date > addDays(today, -14));
-  const withEnd = recent.filter(s => s.analysis?.ending && s.analysis.ending !== 'silent');
-  const landed = withEnd.filter(s => s.analysis.ending === 'landed').length;
-  const pres = recent.filter(s => s.presence);
-  const stat = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
-  $('stats').innerHTML =
-    stat('Streak', streak) +
-    stat('Endings landed', withEnd.length ? `${Math.round((landed / withEnd.length) * 100)}%` : '–') +
-    stat('Presence', pres.length ? (pres.reduce((a, s) => a + s.presence, 0) / pres.length).toFixed(1) : '–');
+  chip.textContent = streak > 1 ? `${streak} days running` : '';
+  chip.hidden = streak < 2;
 }
 
 $('skip-btn').onclick = async () => {
@@ -129,8 +103,8 @@ $('skip-btn').onclick = async () => {
 };
 
 // ───────── Recording ─────────
-let stream = null, recorder = null, chunks = [], recStart = 0, raf = 0, cancelled = false, transcriber = null;
-let take = null; // { blob, seconds, analysis, transcript, tAnalysis }
+let stream = null, recorder = null, chunks = [], recStart = 0, raf = 0, cancelled = false;
+let take = null; // { blob, seconds }
 
 function pickMime() {
   if (!window.MediaRecorder) return '';
@@ -171,8 +145,6 @@ function startRecording() {
   recorder.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
   recorder.onstop = onRecorded;
   recorder.start(1000);
-  transcriber = speechSupported ? createTranscriber() : null;
-  transcriber?.start();
   recStart = performance.now();
   $('cue').innerHTML = '&nbsp;';
   $('cue').dataset.on = '';
@@ -207,18 +179,10 @@ function stopRecording() {
 async function onRecorded() {
   releaseMic();
   const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'audio/mp4' });
-  $('finish-btn').textContent = 'Preparing…';
-  const [speech, analysis] = await Promise.all([
-    transcriber ? transcriber.stop() : Promise.resolve({ segments: [], failed: 'unsupported' }),
-    analyseAudio(blob, LIMIT).catch(e => { console.warn('analysis failed', e); return null; }),
-  ]);
-  $('finish-btn').textContent = 'Finish';
-  const seconds = analysis?.duration || recSeconds;
-  const tA = analyseTranscript(speech.segments, seconds);
-  take = { blob, seconds, analysis, transcript: tA?.text || '', tAnalysis: tA, speechFailed: speech.failed };
+  take = { blob, seconds: recSeconds };
   document.querySelectorAll('#s-review input, [data-screen="review"] input').forEach(i => { i.checked = false; });
   $('note-input').value = '';
-  $('note-hint').textContent = 'Keep it to one thing you can actually try.';
+  $('note-hint').textContent = 'Just one thing.';
   renderReview();
   show('review');
 }
@@ -228,33 +192,6 @@ $('redo-btn').onclick = begin;
 $('retake-btn').onclick = begin;
 $('finish-btn').onclick = stopRecording;
 $('cancel-ready').onclick = () => { cancelled = true; releaseMic(); show('today'); };
-
-// ───────── Waveform ─────────
-function drawWave(svg, analysis, { endZone = false } = {}) {
-  svg.innerHTML = '';
-  const W = 1000, H = 100;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const peaks = analysis?.peaks || [];
-  const dur = analysis?.duration || 1;
-  if (!peaks.length) return { setProgress() {} };
-  for (const p of analysis.pauses || []) {
-    const r = svgEl('rect', { class: 'pause', x: (p.start / dur) * W, y: 0, width: Math.max(4, ((p.end - p.start) / dur) * W), height: H, rx: 6 });
-    const t = svgEl('title'); t.textContent = `Pause ${(p.end - p.start).toFixed(1)}s at ${fmtTime(p.start)}`; r.append(t);
-    svg.append(r);
-  }
-  if (endZone && analysis.speechEnd) {
-    const s = Math.max(0, analysis.speechEnd - ENDING_SECS);
-    svg.append(svgEl('rect', { class: 'endzone', x: (s / dur) * W, y: 1, width: ((analysis.speechEnd - s) / dur) * W, height: H - 2, rx: 6, 'vector-effect': 'non-scaling-stroke' }));
-  }
-  const n = peaks.length, slot = W / n, bw = slot * 0.62;
-  const bars = peaks.map((p, i) => {
-    const h = Math.max(3, p * (H - 8));
-    const r = svgEl('rect', { class: 'bar', x: i * slot + (slot - bw) / 2, y: (H - h) / 2, width: bw, height: h, rx: 1.5 });
-    svg.append(r);
-    return r;
-  });
-  return { setProgress(frac) { bars.forEach((b, i) => b.classList.toggle('played', (i + 0.5) / n <= frac)); } };
-}
 
 // ───────── Playback (one shared <audio>) ─────────
 let loadedBlob = null, playUrl = null, activeBtn = null, onProgress = null, knownDur = 0, progRaf = 0, unlocked = false;
@@ -327,87 +264,48 @@ async function blobFor(s, btn) {
 }
 async function playSession(s, btn, opts = {}) {
   const blob = await blobFor(s, btn);
-  if (blob) play(blob, btn, { dur: s.analysis?.duration, ...opts });
+  if (blob) play(blob, btn, opts);
 }
 
 // ───────── Review ─────────
-let reviewWave = null;
-function renderEnding(el, analysis) {
-  el.innerHTML = '';
-  if (!analysis) { el.textContent = 'Couldn’t analyse this recording.'; return; }
-  const c = ENDING_COPY[analysis.ending];
-  const b = document.createElement('span'); b.className = `badge ${analysis.ending}`; b.textContent = c.label;
-  const d = document.createElement('span'); d.textContent = c.detail;
-  el.append(b, d);
-}
-function pauseLine(analysis) {
-  if (!analysis?.pauses) return '';
-  const n = analysis.pauses.length;
-  if (!n) return 'No long pauses. Shaded areas on the waveform will show pauses over 1.2 seconds.';
-  const longest = Math.max(...analysis.pauses.map(p => p.end - p.start));
-  return `${n} pause${n === 1 ? '' : 's'} over 1.2 seconds (longest ${longest.toFixed(1)}s), shaded on the waveform. The dashed box marks your last ${ENDING_SECS} seconds.`;
-}
-function renderTStats(el, tA) {
-  el.innerHTML = '';
-  if (!tA) return;
-  const add = (k, v, title) => { const d = document.createElement('div'); d.title = title; d.innerHTML = `<dt>${k}</dt><dd>${v}</dd>`; el.append(d); };
-  add('Words', tA.words, 'Words recognised');
-  if (tA.wpm) add('Pace', `${tA.wpm} wpm`, 'Words per minute. About 130–160 is a relaxed speaking pace.');
-  add('Fillers', tA.fillerTotal, Object.entries(tA.fillers).map(([k, v]) => `${k} ×${v}`).join(', ') || 'None found');
-}
-function transcriptInto(el, text, tA, failed) {
-  el.classList.toggle('empty', !text);
-  if (text) { renderTranscript(el, text, tA?.lastSentence); return; }
-  el.textContent = failed === 'unsupported'
-    ? 'This browser doesn’t offer speech-to-text. Safari on iPhone and Chrome on a laptop do.'
-    : failed ? 'Speech-to-text was blocked. Allow Speech Recognition for Safari (Settings → Privacy → Speech Recognition).'
-      : 'No words were picked up this time.';
-}
-
-function renderReview() {
+async function renderReview() {
   $('review-question').textContent = todayPrompt.text;
-  const a = take.analysis;
-  reviewWave = drawWave($('review-wave'), a, { endZone: true });
   $('review-time').textContent = fmtTime(take.seconds);
-  renderEnding($('ending'), a);
-  $('pause-line').textContent = pauseLine(a);
-  $('ending-btn').disabled = !a?.speechEnd;
-  renderTStats($('tstats'), take.tAnalysis);
-  transcriptInto($('transcript'), take.transcript, take.tAnalysis, take.speechFailed);
-  $('t-legend').hidden = !take.transcript;
+  setScrub(0);
+  const today = todayKey();
+  const prev = (await allSessions()).find(s => s.date < today && s.note && s.note.trim());
+  $('review-focus').hidden = !prev;
+  if (prev) $('review-focus-text').textContent = prev.note;
 }
-const reviewProgress = (t, d) => {
-  reviewWave?.setProgress(d ? t / d : 0);
-  $('review-time').textContent = fmtTime(t || 0);
-};
-$('review-play').onclick = (e) => play(take.blob, e.currentTarget, { dur: take.seconds, progress: reviewProgress });
-$('ending-btn').onclick = () => {
-  const a = take.analysis;
-  play(take.blob, $('review-play'), { dur: take.seconds, from: Math.max(0, a.speechEnd - ENDING_SECS), progress: reviewProgress });
-};
-$('review-wave').addEventListener('click', (e) => {
+function setScrub(frac) {
+  $('scrub-fill').style.width = `${Math.min(100, Math.max(0, frac * 100))}%`;
+  $('review-scrub').setAttribute('aria-valuenow', Math.round(frac * 100));
+}
+const reviewProgress = (t, d) => { setScrub(d ? t / d : 0); $('review-time').textContent = fmtTime(t || 0); };
+const playTake = (from = null) => play(take.blob, $('review-play'), { dur: take.seconds, from, progress: reviewProgress });
+$('review-play').onclick = () => playTake();
+$('ending-btn').onclick = () => playTake(Math.max(0, (duration() || take.seconds) - 10));
+$('review-scrub').addEventListener('click', (e) => {
   const r = e.currentTarget.getBoundingClientRect();
-  const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-  play(take.blob, $('review-play'), { dur: take.seconds, from: frac * (take.analysis?.duration || take.seconds), progress: reviewProgress });
+  playTake(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * (duration() || take.seconds));
+});
+$('review-scrub').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  playTake(Math.max(0, audio.currentTime + (e.key === 'ArrowRight' ? 5 : -5)));
 });
 
 $('save-btn').onclick = async () => {
   const note = $('note-input').value.trim();
-  if (!note) { $('note-hint').textContent = 'Write one small thing. It becomes tomorrow’s focus.'; $('note-input').focus(); return; }
+  if (!note) { $('note-hint').textContent = 'Write one small thing. You’ll see it tomorrow.'; $('note-input').focus(); return; }
   const date = todayKey();
   const finished = document.querySelector('input[name="finished"]:checked')?.value ?? null;
   const presence = Number(document.querySelector('input[name="presence"]:checked')?.value) || null;
   const prev = await db.get('sessions', date);
-  const a = take.analysis, t = take.tAnalysis;
   await db.put('audio', take.blob, date);
   await db.put('sessions', {
     date, promptId: todayPrompt.id, promptText: todayPrompt.text,
     finished, presence, note,
-    transcript: take.transcript || '',
-    analysis: a || t ? {
-      ...(a || {}),
-      ...(t ? { words: t.words, wpm: t.wpm, fillers: t.fillers, fillerTotal: t.fillerTotal, lastSentence: t.lastSentence } : {}),
-    } : null,
     audioPath: prev?.audioPath ?? null, audioType: take.blob.type,
     updatedAt: new Date().toISOString(),
     synced: false, audioDirty: true,
@@ -419,24 +317,22 @@ $('save-btn').onclick = async () => {
 $('done-btn').onclick = async () => { await renderToday(); show('today'); };
 
 // ───────── History ─────────
-const FINISHED_LABEL = { yes: 'Finished ✓', partly: 'Partly finished', no: 'Didn’t finish' };
+const FINISHED_LABEL = { yes: 'finished the thought', partly: 'partly finished', no: 'didn’t finish' };
 async function renderHistory() {
   const sessions = await allSessions();
-  $('history-count').textContent = sessions.length ? `${sessions.length} day${sessions.length === 1 ? '' : 's'} of practice` : '';
+  $('history-count').textContent = sessions.length ? `${sessions.length} entr${sessions.length === 1 ? 'y' : 'ies'} so far` : '';
   const list = $('entries');
   list.innerHTML = '';
   if (!sessions.length) {
-    list.innerHTML = '<li class="card empty-state">No days yet. Your first one starts today.</li>';
-    $('trend').innerHTML = '';
+    list.innerHTML = '<li class="empty-state">No entries yet. The first one starts today.</li>';
     return;
   }
   for (const s of sessions) list.append(entryCard(s));
-  renderTrends(sessions.slice(0, 30).reverse());
 }
 
 function entryCard(s) {
   const li = document.createElement('li');
-  li.className = 'card entry';
+  li.className = 'entry';
   li.innerHTML = `
     <div class="entry-top">
       <button class="play" aria-label="Play recording"></button>
@@ -446,103 +342,19 @@ function entryCard(s) {
       </div>
     </div>
     <div class="entry-tags"></div>
-    <p class="entry-note"></p>
-    <details><summary>Waveform and transcript</summary>
-      <svg class="wave" preserveAspectRatio="none" role="img" aria-label="Waveform"></svg>
-      <p class="transcript"></p>
-    </details>`;
+    <p class="entry-note"></p>`;
   li.querySelector('.entry-date').textContent = fmtShort(s.date);
   li.querySelector('.entry-q').textContent = s.promptText;
   const tags = li.querySelector('.entry-tags');
-  const tag = (text, cls = '') => { const t = document.createElement('span'); t.className = `tag ${cls}`; t.textContent = text; tags.append(t); };
-  const a = s.analysis;
-  if (a?.ending) { const b = document.createElement('span'); b.className = `badge ${a.ending}`; b.textContent = ENDING_COPY[a.ending].label; tags.append(b); }
+  const tag = (text) => { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; tags.append(t); };
   if (s.finished) tag(FINISHED_LABEL[s.finished]);
-  if (s.presence) tag(`Presence ${s.presence}/5`);
-  if (a?.wpm) tag(`${a.wpm} wpm`);
-  if (a?.fillerTotal != null) tag(`${a.fillerTotal} filler${a.fillerTotal === 1 ? '' : 's'}`);
+  if (s.presence) tag(`presence ${s.presence} of 5`);
+  if (!tags.children.length) tags.remove();
   const note = li.querySelector('.entry-note');
   if (s.note) note.textContent = `Tomorrow: ${s.note}`; else note.remove();
-
-  const details = li.querySelector('details');
-  if (!a?.peaks && !s.transcript) details.remove();
-  let wave = null;
-  details?.addEventListener('toggle', () => {
-    if (!details.open || wave) return;
-    wave = drawWave(details.querySelector('.wave'), a);
-    if (!a?.peaks) details.querySelector('.wave').remove();
-    transcriptInto(details.querySelector('.transcript'), s.transcript, a, null);
-  });
   const btn = li.querySelector('.play');
-  const progress = (t, d) => wave?.setProgress(d ? t / d : 0);
-  btn.onclick = () => playSession(s, btn, { progress });
-  details?.querySelector('.wave')?.addEventListener('click', async (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const frac = (e.clientX - r.left) / r.width;
-    playSession(s, btn, { from: frac * (a?.duration || 60), progress });
-  });
+  btn.onclick = () => playSession(s, btn);
   return li;
-}
-
-// Two small single-series charts (different scales → never one dual-axis chart).
-function renderTrends(rows) {
-  const el = $('trend');
-  el.innerHTML = '';
-  if (rows.length < 2) { el.innerHTML = '<p class="hint">Trends appear after a couple of days.</p>'; return; }
-  const score = { yes: 1, partly: 0.5, no: 0 };
-  const presence = rows.map(r => ({ date: r.date, v: r.presence ?? null }));
-  const finished = rows.map((_, i) => {
-    const win = rows.slice(Math.max(0, i - 4), i + 1).map(r => score[r.finished]).filter(v => v != null);
-    return { date: rows[i].date, v: win.length ? Math.round((win.reduce((a, b) => a + b, 0) / win.length) * 100) : null };
-  });
-  el.append(
-    chartCard('Presence', 'Your 1–5 rating each day', presence, { min: 1, max: 5, ticks: [1, 3, 5], color: 'var(--chart-a)', fmt: v => `${v}/5` }),
-    chartCard('Finished thoughts', 'Rolling 5-day share of answers you finished', finished, { min: 0, max: 100, ticks: [0, 50, 100], color: 'var(--chart-b)', fmt: v => `${v}%`, tick: v => `${v}%` }),
-  );
-}
-
-function chartCard(title, sub, pts, { min, max, ticks, color, fmt, tick = String }) {
-  const card = document.createElement('article');
-  card.className = 'card chart-card';
-  card.innerHTML = `<h3></h3><p class="sub"></p><div class="chart"></div>`;
-  card.querySelector('h3').textContent = title;
-  card.querySelector('.sub').textContent = sub;
-  const W = 320, H = 120, L = 30, R = 8, T = 8, B = 8;
-  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${title} over the last ${pts.length} days` });
-  const x = i => L + (i / (pts.length - 1)) * (W - L - R);
-  const y = v => T + (1 - (v - min) / (max - min)) * (H - T - B);
-  for (const t of ticks) {
-    svg.append(svgEl('line', { class: 'grid', x1: L, x2: W - R, y1: y(t), y2: y(t) }));
-    const lab = svgEl('text', { class: 'axis', x: L - 8, y: y(t) + 4, 'text-anchor': 'end' }); lab.textContent = tick(t); svg.append(lab);
-  }
-  let d = '';
-  pts.forEach((p, i) => { if (p.v == null) return; d += `${d && pts[i - 1]?.v != null ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)} `; });
-  svg.append(svgEl('path', { class: 'line', d, stroke: color }));
-  pts.forEach((p, i) => { if (p.v != null && (pts.length <= 14 || i === pts.length - 1)) svg.append(svgEl('circle', { class: 'dot', cx: x(i), cy: y(p.v), r: 4, fill: color })); });
-  const cross = svgEl('line', { class: 'cross', y1: T, y2: H - B, visibility: 'hidden' });
-  const hot = svgEl('circle', { class: 'dot', r: 5, fill: color, visibility: 'hidden' });
-  const hit = svgEl('rect', { x: L, y: 0, width: W - L - R, height: H, fill: 'transparent' });
-  svg.append(cross, hot, hit);
-  const tip = $('tooltip');
-  const move = (e) => {
-    const r = svg.getBoundingClientRect();
-    const sx = ((e.clientX - r.left) / r.width) * W;
-    const i = Math.round(((sx - L) / (W - L - R)) * (pts.length - 1));
-    const p = pts[Math.max(0, Math.min(pts.length - 1, i))];
-    const idx = pts.indexOf(p);
-    cross.setAttribute('x1', x(idx)); cross.setAttribute('x2', x(idx)); cross.setAttribute('visibility', 'visible');
-    if (p.v != null) { hot.setAttribute('cx', x(idx)); hot.setAttribute('cy', y(p.v)); hot.setAttribute('visibility', 'visible'); } else hot.setAttribute('visibility', 'hidden');
-    tip.hidden = false;
-    tip.textContent = `${fmtShort(p.date)} · ${p.v == null ? 'not rated' : fmt(p.v)}`;
-    tip.style.left = `${r.left + (x(idx) / W) * r.width}px`;
-    tip.style.top = `${r.top + ((p.v == null ? T : y(p.v)) / H) * r.height}px`;
-  };
-  const leave = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); hot.setAttribute('visibility', 'hidden'); };
-  hit.addEventListener('pointermove', move);
-  hit.addEventListener('pointerdown', move);
-  hit.addEventListener('pointerleave', leave);
-  card.querySelector('.chart').append(svg);
-  return card;
 }
 
 // ───────── Settings ─────────
@@ -572,7 +384,7 @@ async function renderMine() {
   for (const p of mine) {
     const li = document.createElement('li');
     const span = document.createElement('span'); span.textContent = p.text;
-    const b = document.createElement('button'); b.className = 'btn ghost small'; b.textContent = 'Remove';
+    const b = document.createElement('button'); b.className = 'link'; b.textContent = 'remove';
     b.onclick = async () => { await db.put('prompts', { ...p, deleted: true, synced: false, updatedAt: new Date().toISOString() }); renderMine(); sync.sync(); };
     li.append(span, b); ul.append(li);
   }
