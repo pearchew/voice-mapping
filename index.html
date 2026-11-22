@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Voice Mapping</title>
   <meta name="description" content="A daily 60-second speaking practice.">
-  <meta name="theme-color" content="#F7F3EA" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1E1C19" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F5F3EF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15161A" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,179 +14,233 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Shared SVG defs: a wobble filter that makes strokes look hand-drawn -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <filter id="pencil" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3" result="n"/>
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/>
-      </filter>
-    </defs>
-  </svg>
+<div class="shell">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand"><span class="logo" aria-hidden="true"></span>Voice Mapping</div>
+    <button class="nav-item" data-nav="today" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" class="fill"/></svg>
+      <span>Today</span>
+    </button>
+    <button class="nav-item" data-nav="history">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h9"/></svg>
+      <span>Past days</span>
+    </button>
+    <button class="nav-item" data-nav="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+      <span>Settings</span>
+    </button>
+    <p class="sync-line"><span class="sync-dot" id="sync-dot" aria-hidden="true"></span><span id="sync-short">On this device</span></p>
+  </nav>
 
-  <main class="page" id="page">
-    <header class="topbar">
-      <button class="linkbtn" id="nav-history" aria-label="Open past pages">Pages</button>
-      <div class="tally" id="tally" aria-live="polite"></div>
-      <button class="linkbtn" id="nav-settings" aria-label="Settings and sync">
-        <span class="sync-dot" id="sync-dot" aria-hidden="true"></span>Settings
-      </button>
-    </header>
+  <main class="main" id="main">
 
     <!-- TODAY -->
-    <section class="screen" id="s-today" data-screen="today">
-      <p class="margin-note" id="today-date"></p>
-      <p class="label" id="today-cat">Today's question</p>
-      <h1 class="question" id="today-question"></h1>
-      <button class="linkbtn small" id="skip-btn">Different question</button>
-
-      <div class="focus" id="focus-block" hidden>
-        <p class="label">Your focus today</p>
-        <p class="hand"><mark class="hl" id="focus-text"></mark></p>
-      </div>
-
-      <div id="today-todo">
-        <button class="btn primary" id="begin-btn">Begin<svg class="squiggle" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5 C 20 1, 35 8, 55 4 S 90 2, 118 5"/></svg></button>
-        <p class="hint">Sixty seconds. Speak, then listen back.</p>
-      </div>
-
-      <div id="today-done" hidden>
-        <p class="label">Done for today</p>
-        <div class="entry-mini">
-          <button class="play" id="today-play" aria-label="Play today's recording"></button>
-          <p class="hand" id="today-note"></p>
+    <section class="screen" data-screen="today">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow" id="today-date"></p>
+          <h1 class="page-title">Today</h1>
         </div>
-        <button class="linkbtn small" id="redo-btn">Record again</button>
+        <p class="chip streak" id="streak-chip" hidden></p>
+      </header>
+
+      <div class="today-grid">
+        <article class="card question-card">
+          <p class="eyebrow" id="today-cat">Today's question</p>
+          <h2 class="question" id="today-question"></h2>
+
+          <div id="today-todo">
+            <div class="actions">
+              <button class="btn primary" id="begin-btn">Begin · 60 seconds</button>
+              <button class="btn ghost" id="skip-btn">Different question</button>
+            </div>
+          </div>
+
+          <div id="today-done" hidden>
+            <p class="done-badge">Done for today</p>
+            <div class="mini-player">
+              <button class="play" id="today-play" aria-label="Play today's recording"></button>
+              <p class="note-text" id="today-note"></p>
+            </div>
+            <div class="actions"><button class="btn ghost" id="redo-btn">Record again</button></div>
+          </div>
+        </article>
+
+        <aside class="side">
+          <article class="card soft-peach" id="focus-block" hidden>
+            <p class="eyebrow">Your focus today</p>
+            <p class="focus-text" id="focus-text"></p>
+          </article>
+          <article class="card">
+            <p class="eyebrow">Last 7 days</p>
+            <ol class="week" id="week"></ol>
+            <dl class="stats" id="stats"></dl>
+          </article>
+        </aside>
       </div>
     </section>
 
     <!-- READY -->
-    <section class="screen center" id="s-ready" data-screen="ready" hidden>
+    <section class="screen focus" data-screen="ready" hidden>
       <p class="breathe">Breathe.<br>Notice where you are.</p>
       <p class="count" id="count" aria-live="assertive">3</p>
-      <button class="linkbtn small" id="cancel-ready">Cancel</button>
+      <button class="btn ghost" id="cancel-ready">Cancel</button>
     </section>
 
     <!-- SPEAK -->
-    <section class="screen center" id="s-speak" data-screen="speak" hidden>
-      <p class="margin-note rec">● rec</p>
-      <p class="question small" id="speak-question"></p>
+    <section class="screen focus" data-screen="speak" hidden>
+      <p class="rec-pill"><span></span>Recording</p>
+      <p class="speak-q" id="speak-question"></p>
       <div class="ring-wrap">
         <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
           <circle class="ring-track" cx="100" cy="100" r="86"/>
           <circle class="ring-ink" id="ring-ink" cx="100" cy="100" r="86"/>
         </svg>
-        <p class="secs" id="secs" aria-live="off">60</p>
+        <p class="secs" id="secs">60</p>
       </div>
       <p class="cue" id="cue" aria-live="polite">&nbsp;</p>
       <button class="btn" id="finish-btn">Finish</button>
     </section>
 
-    <!-- REVIEW -->
-    <section class="screen" id="s-review" data-screen="review" hidden>
-      <p class="label">Listen back</p>
-      <div class="player">
-        <button class="play big" id="review-play" aria-label="Play recording"></button>
-        <div class="scrub"><div class="scrub-fill" id="scrub-fill"></div></div>
-        <span class="time" id="review-time">0:00</span>
-      </div>
-
-      <fieldset class="check">
-        <legend class="label">Did you finish your last thought?</legend>
-        <div class="ticks" id="finished-group">
-          <label><input type="radio" name="finished" value="yes"><span class="box"></span>Yes</label>
-          <label><input type="radio" name="finished" value="partly"><span class="box"></span>Partly</label>
-          <label><input type="radio" name="finished" value="no"><span class="box"></span>No</label>
+    <!-- REVIEW (listen back + note) -->
+    <section class="screen" data-screen="review" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Listen back</p>
+          <h1 class="page-title review-q" id="review-question"></h1>
         </div>
-      </fieldset>
+      </header>
 
-      <fieldset class="check">
-        <legend class="label">How present did you feel?</legend>
-        <div class="circles" id="presence-group">
-          <label><input type="radio" name="presence" value="1"><span>1</span></label>
-          <label><input type="radio" name="presence" value="2"><span>2</span></label>
-          <label><input type="radio" name="presence" value="3"><span>3</span></label>
-          <label><input type="radio" name="presence" value="4"><span>4</span></label>
-          <label><input type="radio" name="presence" value="5"><span>5</span></label>
+      <div class="review-grid">
+        <div class="col">
+          <article class="card">
+            <div class="player">
+              <button class="play big" id="review-play" aria-label="Play recording"></button>
+              <div class="wave-box">
+                <svg class="wave" id="review-wave" preserveAspectRatio="none" role="img" aria-label="Waveform of your recording"></svg>
+              </div>
+              <span class="time" id="review-time">0:00</span>
+            </div>
+            <div class="ending-row">
+              <button class="btn small" id="ending-btn">Hear your ending</button>
+              <div class="ending" id="ending" aria-live="polite"></div>
+            </div>
+            <p class="hint" id="pause-line"></p>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <p class="eyebrow">Transcript</p>
+              <dl class="tstats" id="tstats"></dl>
+            </div>
+            <p class="transcript" id="transcript"></p>
+            <p class="legend-line" id="t-legend"><span class="key last"></span>final thought <span class="key filler"></span>filler</p>
+          </article>
         </div>
-        <p class="scale-ends"><span>scattered</span><span>here</span></p>
-      </fieldset>
 
-      <div class="row">
-        <button class="linkbtn small" id="retake-btn">Record again</button>
-        <button class="btn primary" id="to-note-btn">Next</button>
+        <div class="col">
+          <article class="card">
+            <fieldset class="check">
+              <legend class="q-label">Did you finish your last thought?</legend>
+              <div class="seg" id="finished-group">
+                <label><input type="radio" name="finished" value="yes"><span>Yes</span></label>
+                <label><input type="radio" name="finished" value="partly"><span>Partly</span></label>
+                <label><input type="radio" name="finished" value="no"><span>No</span></label>
+              </div>
+            </fieldset>
+            <fieldset class="check">
+              <legend class="q-label">How present did you feel?</legend>
+              <div class="seg five" id="presence-group">
+                <label><input type="radio" name="presence" value="1"><span>1</span></label>
+                <label><input type="radio" name="presence" value="2"><span>2</span></label>
+                <label><input type="radio" name="presence" value="3"><span>3</span></label>
+                <label><input type="radio" name="presence" value="4"><span>4</span></label>
+                <label><input type="radio" name="presence" value="5"><span>5</span></label>
+              </div>
+              <p class="scale-ends"><span>Scattered</span><span>Fully here</span></p>
+            </fieldset>
+          </article>
+
+          <article class="card soft-peach">
+            <label class="q-label" for="note-input">One thing to improve tomorrow</label>
+            <textarea class="note-input" id="note-input" rows="3" maxlength="200" placeholder="Tomorrow I'll…"></textarea>
+            <p class="hint" id="note-hint">Keep it to one thing you can actually try.</p>
+          </article>
+
+          <div class="actions spread">
+            <button class="btn ghost" id="retake-btn">Record again</button>
+            <button class="btn primary" id="save-btn">Save</button>
+          </div>
+        </div>
       </div>
-    </section>
-
-    <!-- NOTE -->
-    <section class="screen" id="s-note" data-screen="note" hidden>
-      <p class="label">One thing to improve</p>
-      <label class="sr" for="note-input">Tomorrow I'll…</label>
-      <textarea class="hand-input" id="note-input" rows="3" maxlength="200" placeholder="Tomorrow I'll…"></textarea>
-      <p class="hint" id="note-hint">Keep it to one thing you can actually try.</p>
-      <button class="btn primary" id="save-btn">Save the page</button>
     </section>
 
     <!-- DONE -->
-    <section class="screen center" id="s-done" data-screen="done" hidden>
-      <p class="breathe">Page saved.<br>See you tomorrow.</p>
-      <p class="hand" id="done-note"></p>
-      <button class="btn" id="done-btn">Close the notebook</button>
+    <section class="screen focus" data-screen="done" hidden>
+      <div class="done-mark" aria-hidden="true">✓</div>
+      <p class="breathe">Saved. See you tomorrow.</p>
+      <p class="focus-text" id="done-note"></p>
+      <button class="btn primary" id="done-btn">Back to today</button>
     </section>
 
     <!-- HISTORY -->
-    <section class="screen" id="s-history" data-screen="history" hidden>
-      <div class="row">
-        <p class="label">Past pages</p>
-        <button class="linkbtn small" id="history-back">Back to today</button>
-      </div>
-      <div class="trend" id="trend"></div>
+    <section class="screen" data-screen="history" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow" id="history-count"></p>
+          <h1 class="page-title">Past days</h1>
+        </div>
+      </header>
+      <div class="trend-grid" id="trend"></div>
       <ol class="entries" id="entries"></ol>
     </section>
 
     <!-- SETTINGS -->
-    <section class="screen" id="s-settings" data-screen="settings" hidden>
-      <div class="row">
-        <p class="label">Settings</p>
-        <button class="linkbtn small" id="settings-back">Back to today</button>
+    <section class="screen" data-screen="settings" hidden>
+      <header class="page-head"><div><h1 class="page-title">Settings</h1></div></header>
+      <div class="settings-grid">
+        <article class="card">
+          <h2 class="card-title">Sync</h2>
+          <p class="hint" id="sync-status"></p>
+          <form id="auth-form" class="stack" hidden>
+            <label class="field">Email<input type="email" id="auth-email" autocomplete="username" required></label>
+            <label class="field">Password<input type="password" id="auth-pass" autocomplete="current-password" minlength="8" required></label>
+            <div class="actions">
+              <button class="btn primary" type="submit">Sign in</button>
+              <button class="btn ghost" type="button" id="signup-btn">Create account</button>
+            </div>
+          </form>
+          <div id="signed-in" class="actions" hidden>
+            <button class="btn" id="sync-now">Sync now</button>
+            <button class="btn ghost" id="signout-btn">Sign out</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">Your own questions</h2>
+          <form id="prompt-form" class="inline-form">
+            <label class="sr" for="prompt-input">Add a question</label>
+            <input class="text-input" id="prompt-input" maxlength="160" placeholder="Add a question…">
+            <button class="btn" type="submit">Add</button>
+          </form>
+          <ul class="mine" id="my-prompts"></ul>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">Backup</h2>
+          <p class="hint">Download every day and recording as one file.</p>
+          <div class="actions"><button class="btn" id="export-btn">Export everything</button></div>
+        </article>
       </div>
-
-      <h2 class="sub">Sync</h2>
-      <p class="hint" id="sync-status"></p>
-      <form id="auth-form" class="stack" hidden>
-        <label class="field">Email<input type="email" id="auth-email" autocomplete="username" required></label>
-        <label class="field">Password<input type="password" id="auth-pass" autocomplete="current-password" minlength="8" required></label>
-        <div class="row">
-          <button class="btn" type="submit" id="signin-btn">Sign in</button>
-          <button class="linkbtn small" type="button" id="signup-btn">Create account</button>
-        </div>
-      </form>
-      <div id="signed-in" class="row" hidden>
-        <button class="btn" id="sync-now">Sync now</button>
-        <button class="linkbtn small" id="signout-btn">Sign out</button>
-      </div>
-
-      <h2 class="sub">Your own questions</h2>
-      <form id="prompt-form" class="stack">
-        <label class="sr" for="prompt-input">Add a question</label>
-        <input class="hand-line" id="prompt-input" maxlength="160" placeholder="Add a question…">
-        <button class="btn" type="submit">Add</button>
-      </form>
-      <ul class="mine" id="my-prompts"></ul>
-
-      <h2 class="sub">Backup</h2>
-      <button class="btn" id="export-btn">Export everything</button>
-      <p class="hint">Saves every page and recording as one file.</p>
     </section>
   </main>
+</div>
 
-  <audio id="audio" preload="auto" playsinline></audio>
-  <script type="module" src="app.js"></script>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<audio id="audio" preload="auto" playsinline></audio>
+<script type="module" src="app.js"></script>
 </body>
 </html>

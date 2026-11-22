@@ -1,14 +1,16 @@
 # Voice Mapping
 
-A daily 60-second speaking practice in a notebook-style page. Each day you get one question, a breath and a 3-2-1 countdown, and 60 seconds to answer out loud. Then you listen back, mark whether you finished your last thought and how present you felt, and write one thing to improve tomorrow. That note becomes the next day's highlighted focus.
+A daily 60-second speaking practice. Each day you get one question, a breath and a 3-2-1 countdown, and 60 seconds to answer out loud. Then you listen back, mark whether you finished your last thought and how present you felt, and write one thing to improve tomorrow. That note becomes the next day's highlighted focus.
 
 ## Files
 | File | What it does |
 |---|---|
-| `index.html`, `styles.css` | Screens and the notebook theme (light and night) |
+| `index.html`, `styles.css` | Screens and the soft-colour theme: bottom tabs on phones, sidebar layout on laptops, light and dark |
+| `analysis.js` | Waveform, pause detection and the ending check (landed / trailed off / cut off), plus transcript stats |
+| `speech.js` | Live speech-to-text while recording (Safari on iPhone, Chrome on laptops) |
 | `app.js` | Flow, recording, playback, history, settings |
 | `db.js` | IndexedDB storage (local-first, works offline) |
-| `sync.js`, `config.js` | Optional Supabase sync between phone and laptop |
+| `sync.js`, `config.js` | Supabase sync between phone and laptop |
 | `prompts.js` | 60 built-in questions (you can add your own in Settings) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline cache and Home Screen install |
 | `supabase/schema.sql` | Tables, row-level security and the private `recordings` bucket |

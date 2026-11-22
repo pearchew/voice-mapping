@@ -10,6 +10,8 @@ create table if not exists public.sessions (
   note text default '',
   audio_path text,
   audio_type text,
+  transcript text,
+  analysis jsonb,
   updated_at timestamptz not null default now(),
   unique (user_id, date)
 );

@@ -85,6 +85,8 @@ async function push() {
       finished: s.finished ?? null,
       presence: s.presence ?? null,
       note: s.note ?? '',
+      transcript: s.transcript ?? null,
+      analysis: s.analysis ?? null,
       audio_path: s.audioPath ?? null,
       audio_type: s.audioType ?? null,
       updated_at: s.updatedAt,
@@ -122,6 +124,7 @@ async function pull() {
     await db.put('sessions', {
       date: r.date, promptId: r.prompt_id, promptText: r.prompt_text,
       finished: r.finished, presence: r.presence, note: r.note,
+      transcript: r.transcript, analysis: r.analysis,
       audioPath: r.audio_path, audioType: r.audio_type,
       updatedAt: r.updated_at, synced: true, audioDirty: false,
     });
