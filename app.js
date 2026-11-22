@@ -13,7 +13,6 @@ const audio = $('audio');
 const pad = (n) => String(n).padStart(2, '0');
 const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseKey = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
-const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
 // ?date=YYYY-MM-DD previews another day (handy for testing).
 const override = new URLSearchParams(location.search).get('date');
 const todayKey = () => (override && /^\d{4}-\d{2}-\d{2}$/.test(override) ? override : keyOf(new Date()));
@@ -57,14 +56,6 @@ async function promptFor(date) {
 }
 
 // ───────── Today ─────────
-function computeStreak(dates, today) {
-  const set = new Set(dates);
-  let k = set.has(today) ? today : addDays(today, -1);
-  let n = 0;
-  while (set.has(k)) { n++; k = addDays(k, -1); }
-  return n;
-}
-
 let todayPrompt = null;
 async function renderToday() {
   const today = todayKey();
@@ -86,14 +77,6 @@ async function renderToday() {
     $('today-note').textContent = done.note ? `Tomorrow: ${done.note}` : '';
     $('today-play').onclick = (e) => playSession(done, e.currentTarget);
   }
-
-  // Streak
-  const dates = sessions.map(s => s.date);
-  const streak = computeStreak(dates, today);
-  const chip = $('streak-chip');
-  chip.hidden = !streak;
-  chip.textContent = streak > 1 ? `${streak} days running` : '';
-  chip.hidden = streak < 2;
 }
 
 $('skip-btn').onclick = async () => {

@@ -104,7 +104,6 @@ body.focus-mode .nav { visibility: hidden; }
   font-variation-settings: 'SOFT' 100;
   color: var(--ink-2);
 }
-.streak { font: 400 15px/1.3 var(--text); font-style: normal; color: var(--ink-2); }
 .kicker {
   margin: 0 0 8px;
   font: 500 13px/1.4 var(--text);
