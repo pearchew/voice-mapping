@@ -1,7 +1,7 @@
 // Offline shell. Bump VERSION whenever app files change.
-const VERSION = 'vm-v5';
+const VERSION = 'vm-v6';
 const SHELL = [
-  './', 'index.html', 'styles.css', 'app.js', 'db.js', 'sync.js', 'prompts.js', 'config.js',
+  './', 'index.html', 'styles.css', 'app.js', 'db.js', 'pauses.js', 'sync.js', 'prompts.js', 'config.js',
   'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
 ];
 const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];

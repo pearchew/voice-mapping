@@ -195,6 +195,12 @@ body.focus-mode .nav { visibility: hidden; }
 .scrub-fill::after { content: ''; position: absolute; right: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--clay); }
 .time { color: var(--ink-2); font-size: 15px; min-width: 3.5ch; text-align: right; font-variant-numeric: tabular-nums; }
 #ending-btn { margin-top: 4px; }
+/* Pauses sit as soft moss marks just under the playback line. */
+.pause-marks { position: absolute; left: 0; right: 0; top: 20px; height: 5px; pointer-events: none; }
+.pause-mark { position: absolute; top: 0; height: 5px; min-width: 4px; background: var(--moss); opacity: .75; border-radius: 3px 2px 3px 2px; }
+.pause-line { margin: 4px 0 0; color: var(--ink-2); font-size: 15px; }
+.pause-line::before { content: ''; display: inline-block; width: 14px; height: 5px; margin-right: 8px; vertical-align: middle; background: var(--moss); opacity: .75; border-radius: 3px 2px 3px 2px; }
+.pause-jump { padding: 4px 0; font-size: 15px; font-variant-numeric: tabular-nums; }
 
 .listen-for { margin-top: 40px; }
 .remind { margin: 0 0 16px; font-style: italic; }

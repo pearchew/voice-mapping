@@ -1,6 +1,7 @@
 import { PROMPTS } from './prompts.js';
 import * as db from './db.js';
 import * as sync from './sync.js';
+import { pausesIn, MIN_PAUSE } from './pauses.js';
 
 const LIMIT = 60;          // seconds
 const CUE_AT = 50;         // "start landing your thought"
@@ -330,6 +331,7 @@ async function renderReview() {
   $('save-btn').textContent = editing ? 'Save changes' : 'Keep this entry';
   $('retake-btn').hidden = editing;
   $('cancel-edit').hidden = !editing;
+  showPauses();
   const prev = (await allSessions()).find(s => s.date < rev.date && s.note && s.note.trim());
   $('review-focus').hidden = !prev;
   if (prev) setText($('review-focus-text'), prev.note, guessLang(prev.note));
@@ -339,9 +341,42 @@ function setScrub(frac) {
   $('review-scrub').setAttribute('aria-valuenow', Math.round(frac * 100));
 }
 const reviewProgress = (t, d) => { setScrub(d ? t / d : 0); $('review-time').textContent = fmtTime(t || 0); };
+// Pause markers: silences of 1.5 s or more between your first and last words, found on the device.
+async function showPauses() {
+  const marks = $('pause-marks'), line = $('pause-line');
+  marks.innerHTML = '';
+  line.hidden = true;
+  const r = rev;
+  if (!r.blob) return;
+  const found = await pausesIn(r.blob);
+  if (rev !== r || !found) return; // moved on, or this browser can't decode it
+  const { pauses, duration: total } = found;
+  line.hidden = false;
+  line.innerHTML = '';
+  if (!pauses.length) { line.textContent = `No pauses longer than ${MIN_PAUSE} seconds.`; return; }
+  line.append(`${pauses.length} pause${pauses.length === 1 ? '' : 's'} of ${MIN_PAUSE} s or more: `);
+  pauses.forEach((p, i) => {
+    const m = document.createElement('span');
+    m.className = 'pause-mark';
+    m.style.left = `${(p.start / total) * 100}%`;
+    m.style.width = `${((p.end - p.start) / total) * 100}%`;
+    marks.append(m);
+    const b = document.createElement('button');
+    b.className = 'link pause-jump';
+    b.textContent = `${fmtTime(p.start)} (${(p.end - p.start).toFixed(1)} s)`;
+    b.setAttribute('aria-label', `Play from just before the pause at ${fmtTime(p.start)}`);
+    b.onclick = () => playTake(Math.max(0, p.start - 1));
+    if (i) line.append(' · ');
+    line.append(b);
+  });
+}
+
 async function playTake(from = null) {
   const btn = $('review-play');
-  if (!rev.blob && rev.session) rev.blob = await blobFor(rev.session, btn);
+  if (!rev.blob && rev.session) {
+    rev.blob = await blobFor(rev.session, btn);
+    if (rev.blob) showPauses();
+  }
   if (!rev.blob) return;
   play(rev.blob, btn, { dur: rev.seconds, from, progress: reviewProgress });
 }
