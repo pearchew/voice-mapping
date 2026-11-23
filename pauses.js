@@ -1,7 +1,8 @@
 // Finds the silences inside a recording, on the device, from loudness alone.
 // No transcription: it works the same in any language.
 
-export const MIN_PAUSE = 1.5; // seconds
+export const MIN_PAUSE = 1;   // seconds; the default, changeable in Settings
+export const PAUSE_CHOICES = [0.75, 1, 1.5, 2];
 
 // samples: mono Float32Array, rate: samples per second.
 // Returns [{ start, end }] in seconds, only for silences between your first and last words.
@@ -45,13 +46,13 @@ export function findPauses(samples, rate, minPause = MIN_PAUSE) {
 }
 
 // Decodes a recording and finds its pauses. Resolves to null if the browser can't decode it.
-export async function pausesIn(blob) {
+export async function pausesIn(blob, minPause = MIN_PAUSE) {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
   const ctx = new Ctx();
   try {
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
-    return { pauses: findPauses(buf.getChannelData(0), buf.sampleRate), duration: buf.duration };
+    return { pauses: findPauses(buf.getChannelData(0), buf.sampleRate, minPause), duration: buf.duration };
   } catch {
     return null;
   } finally {

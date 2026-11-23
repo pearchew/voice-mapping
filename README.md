@@ -8,7 +8,7 @@ A daily minute of speaking, kept like a diary.
 1. **Today**: the date, a question, and the note you left yourself yesterday.
 2. **Get ready**: a breath and a 3-2-1 countdown.
 3. **Speak**: 60 seconds to answer out loud. At 10 seconds left you'll see a cue to start landing your thought. You can finish early.
-4. **Listen back**: play it through, or hear just the last ten seconds. Any pause of 1.5 seconds or more between your first and last words is marked on the playback bar; tap its time to hear it from just before. A few questions sit beside it to listen for: the start, losing the thread, silences, and the ending.
+4. **Listen back**: play it through, or hear just the last ten seconds. Any pause of 1 second or more between your first and last words is marked on the playback bar (change the length under Settings → **Marking pauses**); tap its time to hear it from just before. A few questions sit beside it to listen for: the start, losing the thread, silences, and the ending.
 5. **Reflect**: say whether you finished your last thought, how present you were (1–5), and write one thing for tomorrow under *Dear tomorrow,*.
 
 Past days live under **Entries**, newest first, each with its recording and note. Tap **Edit** on any entry (or *Edit the entry* on Today) to change its answers or note. The recording stays as it was.

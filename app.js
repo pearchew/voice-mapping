@@ -1,7 +1,7 @@
 import { PROMPTS } from './prompts.js';
 import * as db from './db.js';
 import * as sync from './sync.js';
-import { pausesIn, MIN_PAUSE } from './pauses.js';
+import { pausesIn, MIN_PAUSE, PAUSE_CHOICES } from './pauses.js';
 
 const LIMIT = 60;          // seconds
 const CUE_AT = 50;         // "start landing your thought"
@@ -348,13 +348,14 @@ async function showPauses() {
   line.hidden = true;
   const r = rev;
   if (!r.blob) return;
-  const found = await pausesIn(r.blob);
+  const min = await getPauseMin();
+  const found = await pausesIn(r.blob, min);
   if (rev !== r || !found) return; // moved on, or this browser can't decode it
   const { pauses, duration: total } = found;
   line.hidden = false;
   line.innerHTML = '';
-  if (!pauses.length) { line.textContent = `No pauses longer than ${MIN_PAUSE} seconds.`; return; }
-  line.append(`${pauses.length} pause${pauses.length === 1 ? '' : 's'} of ${MIN_PAUSE} s or more: `);
+  if (!pauses.length) { line.textContent = `No pauses of ${min} s or more.`; return; }
+  line.append(`${pauses.length} pause${pauses.length === 1 ? '' : 's'} of ${min} s or more: `);
   pauses.forEach((p, i) => {
     const m = document.createElement('span');
     m.className = 'pause-mark';
@@ -497,6 +498,18 @@ function setSyncUI(state, detail) {
 }
 sync.onStatus(setSyncUI);
 
+async function getPauseMin() {
+  const v = await db.get('meta', 'pauseMin');
+  return PAUSE_CHOICES.includes(v) ? v : MIN_PAUSE;
+}
+async function renderPauseChoice() {
+  const min = await getPauseMin();
+  document.querySelectorAll('input[name="pause-min"]').forEach(i => { i.checked = Number(i.value) === min; });
+}
+document.querySelectorAll('input[name="pause-min"]').forEach(i => {
+  i.onchange = async () => { await db.put('meta', Number(i.value), 'pauseMin'); toast(`Pauses of ${i.value} s or more will be marked.`); };
+});
+
 async function renderLangs() {
   const langs = await getLangs();
   document.querySelectorAll('#lang-choices input').forEach(i => { i.checked = langs.includes(i.value); });
@@ -529,7 +542,7 @@ document.querySelectorAll('.nav-item').forEach(b => {
     const to = b.dataset.nav;
     if (to === 'today') await renderToday();
     if (to === 'history') await renderHistory();
-    if (to === 'settings') { await renderMine(); await renderLangs(); }
+    if (to === 'settings') { await renderMine(); await renderLangs(); await renderPauseChoice(); }
     show(to);
   };
 });

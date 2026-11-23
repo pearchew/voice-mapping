@@ -203,6 +203,17 @@
       </section>
 
       <section class="setting">
+        <h2>Marking pauses</h2>
+        <p class="hint">When you listen back, silences at least this long are marked. One second is about when a listener notices you've stopped.</p>
+        <div class="choices" role="radiogroup" aria-label="Shortest pause to mark">
+          <label><input type="radio" name="pause-min" value="0.75"><span>0.75 s</span></label>
+          <label><input type="radio" name="pause-min" value="1"><span>1 s</span></label>
+          <label><input type="radio" name="pause-min" value="1.5"><span>1.5 s</span></label>
+          <label><input type="radio" name="pause-min" value="2"><span>2 s</span></label>
+        </div>
+      </section>
+
+      <section class="setting">
         <h2>Your own questions</h2>
         <form id="prompt-form" class="inline-form">
           <label class="sr" for="prompt-input">Add a question</label>
