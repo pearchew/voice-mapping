@@ -63,7 +63,7 @@ export async function signOut() {
 // ───────── Preferences ─────────
 // Small settings that follow you between devices. They live in your account's
 // user metadata (no extra table), one key each, as { value, at }, last-write-wins.
-export const SYNCED_PREFS = ['pauseMin'];
+export const SYNCED_PREFS = ['pauseMin', 'langs'];
 
 // Save a preference on this device and mark it to be sent up on the next sync.
 export async function setPref(key, value) {

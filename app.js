@@ -522,8 +522,9 @@ document.querySelectorAll('#lang-choices input').forEach(i => {
   i.onchange = async () => {
     const chosen = [...document.querySelectorAll('#lang-choices input:checked')].map(x => x.value);
     if (!chosen.length) { i.checked = true; toast('Keep at least one language.'); return; }
-    await db.put('meta', chosen, 'langs');
+    await sync.setPref('langs', chosen);
     toast('Language choice saved.');
+    sync.sync();
   };
 });
 
@@ -608,9 +609,10 @@ $('export-btn').onclick = async () => {
 // ───────── Boot ─────────
 async function refreshFromSync() {
   const n = await sync.sync();
-  if (n && current === 'today') renderToday();
+  // Settings may have come from another device, so redraw the pages that use them.
+  if (current === 'today') renderToday();
   if (n && current === 'history') renderHistory();
-  if (current === 'settings') renderPauseChoice(); // the pause setting may have come from another device
+  if (current === 'settings') { renderPauseChoice(); renderLangs(); }
 }
 
 (async function boot() {
