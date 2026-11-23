@@ -507,7 +507,11 @@ async function renderPauseChoice() {
   document.querySelectorAll('input[name="pause-min"]').forEach(i => { i.checked = Number(i.value) === min; });
 }
 document.querySelectorAll('input[name="pause-min"]').forEach(i => {
-  i.onchange = async () => { await db.put('meta', Number(i.value), 'pauseMin'); toast(`Pauses of ${i.value} s or more will be marked.`); };
+  i.onchange = async () => {
+    await sync.setPref('pauseMin', Number(i.value));
+    toast(`Pauses of ${i.value} s or more will be marked.`);
+    sync.sync();
+  };
 });
 
 async function renderLangs() {
@@ -606,6 +610,7 @@ async function refreshFromSync() {
   const n = await sync.sync();
   if (n && current === 'today') renderToday();
   if (n && current === 'history') renderHistory();
+  if (current === 'settings') renderPauseChoice(); // the pause setting may have come from another device
 }
 
 (async function boot() {

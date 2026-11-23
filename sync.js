@@ -60,6 +60,59 @@ export async function signOut() {
   await db.put('meta', null, 'lastPull');
 }
 
+// ───────── Preferences ─────────
+// Small settings that follow you between devices. They live in your account's
+// user metadata (no extra table), one key each, as { value, at }, last-write-wins.
+export const SYNCED_PREFS = ['pauseMin'];
+
+// Save a preference on this device and mark it to be sent up on the next sync.
+export async function setPref(key, value) {
+  await db.put('meta', value, key);
+  await db.put('meta', new Date().toISOString(), `${key}:at`);
+  await db.put('meta', true, `${key}:dirty`);
+}
+
+// Pure merge, so it can be tested without a network.
+// local: { [key]: { value, at, dirty } }, remote: user_metadata.
+// Returns { toPush: {pref_key: {value, at}}, toApply: {key: {value, at}} }.
+export function mergePrefs(local, remote = {}) {
+  const toPush = {}, toApply = {};
+  for (const [key, l] of Object.entries(local)) {
+    const r = remote[`pref_${key}`];
+    const remoteNewer = r && r.at && (!l.at || r.at > l.at);
+    if (remoteNewer) toApply[key] = { value: r.value, at: r.at };
+    else if (l.dirty && l.at) toPush[`pref_${key}`] = { value: l.value, at: l.at };
+  }
+  return { toPush, toApply };
+}
+
+async function syncPrefs() {
+  const local = {};
+  for (const key of SYNCED_PREFS) {
+    local[key] = {
+      value: await db.get('meta', key),
+      at: await db.get('meta', `${key}:at`),
+      dirty: await db.get('meta', `${key}:dirty`),
+    };
+    // Chosen before syncing existed: send it up, unless another device already set one.
+    if (local[key].value != null && !local[key].at) local[key] = { ...local[key], at: '1970-01-01T00:00:00.000Z', dirty: true };
+  }
+  const { data, error } = await client.auth.getUser();
+  if (error) throw error;
+  const { toPush, toApply } = mergePrefs(local, data.user?.user_metadata);
+  for (const [key, { value, at }] of Object.entries(toApply)) {
+    await db.put('meta', value, key);
+    await db.put('meta', at, `${key}:at`);
+    await db.put('meta', false, `${key}:dirty`);
+  }
+  if (Object.keys(toPush).length) {
+    const res = await client.auth.updateUser({ data: toPush });
+    if (res.error) throw res.error;
+    for (const k of Object.keys(toPush)) await db.put('meta', false, `${k.slice(5)}:dirty`);
+  }
+  return Object.keys(toApply).length;
+}
+
 const extFor = (type = '') => (type.includes('webm') ? 'webm' : type.includes('ogg') ? 'ogg' : 'm4a');
 
 async function push() {
@@ -149,6 +202,7 @@ export async function sync() {
     try {
       await push();
       const changed = await pull();
+      await syncPrefs();
       await db.put('meta', new Date().toISOString(), 'lastSync');
       emit('ok');
       return changed;

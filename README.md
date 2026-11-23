@@ -32,6 +32,7 @@ Entries are saved on the device first, then synced through a private Supabase pr
 - **First time:** Settings → *Create an account* with your email and a password, click the confirmation email, then sign in.
 - **Each other device:** sign in with the same email and password.
 - Recordings sync too. A recording made on another device downloads the first time you play it.
+- The *Marking pauses* setting follows you too. If two devices change it, the later change wins.
 - Only your account can read your entries and recordings (row-level security on the tables and the storage bucket).
 
 ## Daily reminder
