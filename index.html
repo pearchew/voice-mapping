@@ -16,7 +16,7 @@
   <link rel="icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,100;1,9..144,300..500,100&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..600,100;1,9..144,300..500,100&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&family=Noto+Serif+TC:wght@400;500&family=Noto+Serif+SC:wght@400;500&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -41,6 +41,10 @@
       <h1 class="question" id="today-question"></h1>
 
       <div id="today-todo">
+        <fieldset class="check lang-switch" id="lang-switch" hidden>
+          <legend class="kicker">Answer in</legend>
+          <div class="choices" id="lang-group"></div>
+        </fieldset>
         <div class="actions">
           <button class="btn" id="begin-btn">Begin the minute</button>
           <button class="link" id="skip-btn">Ask me something else</button>
@@ -53,7 +57,10 @@
           <button class="play" id="today-play" aria-label="Play today's recording"></button>
           <p class="note-line" id="today-note"></p>
         </div>
-        <div class="actions"><button class="link" id="redo-btn">Record it again</button></div>
+        <div class="actions">
+          <button class="link" id="edit-today-btn">Edit the entry</button>
+          <button class="link" id="redo-btn">Record it again</button>
+        </div>
       </div>
 
       <aside class="focus" id="focus-block" hidden>
@@ -87,7 +94,7 @@
 
     <!-- REVIEW -->
     <section class="screen" data-screen="review" hidden>
-      <p class="kicker">Listening back to</p>
+      <p class="kicker" id="review-kicker">Listening back to</p>
       <h1 class="question small" id="review-question"></h1>
 
       <div class="player">
@@ -142,6 +149,7 @@
       <div class="actions">
         <button class="btn" id="save-btn">Keep this entry</button>
         <button class="link" id="retake-btn">Record again</button>
+        <button class="link" id="cancel-edit" hidden>Cancel</button>
       </div>
     </section>
 
@@ -180,6 +188,16 @@
           <button class="link" id="signout-btn">Sign out</button>
         </div>
         <p class="sync-line"><span class="sync-dot" id="sync-dot" aria-hidden="true"></span><span id="sync-short"></span></p>
+      </section>
+
+      <section class="setting">
+        <h2>Languages</h2>
+        <p class="hint">Questions rotate between the languages you choose. On days with more than one, you can switch on the Today page.</p>
+        <div class="choices" id="lang-choices" role="group" aria-label="Question languages">
+          <label><input type="checkbox" value="en"><span lang="en">English</span></label>
+          <label><input type="checkbox" value="yue"><span lang="zh-HK">廣東話</span></label>
+          <label><input type="checkbox" value="cmn"><span lang="zh-CN">普通话</span></label>
+        </div>
       </section>
 
       <section class="setting">

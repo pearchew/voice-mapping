@@ -11,7 +11,10 @@ A daily minute of speaking, kept like a diary.
 4. **Listen back**: play it through, or hear just the last ten seconds. A few questions sit beside it to listen for: the start, losing the thread, silences, and the ending.
 5. **Reflect**: say whether you finished your last thought, how present you were (1–5), and write one thing for tomorrow under *Dear tomorrow,*.
 
-Past days live under **Entries**, newest first, each with its recording and note.
+Past days live under **Entries**, newest first, each with its recording and note. Tap **Edit** on any entry (or *Edit the entry* on Today) to change its answers or note. The recording stays as it was.
+
+## Languages
+Questions come in English, Cantonese (廣東話, written in colloquial traditional characters) and Mandarin (普通话, simplified characters). Choose which ones you want under Settings → **Languages**. With more than one chosen, each day picks one, and you can switch under *Answer in* on the Today page. Questions you add yourself in Chinese are sorted into Cantonese or Mandarin by their wording.
 
 ## Use it on your iPhone
 1. Open the link above in **Safari**. It has to be Safari, not the GitHub app or another browser.
@@ -48,7 +51,7 @@ Settings → **Export** saves every entry and recording as one JSON file.
 | `app.js` | The daily flow, recording, playback, entries and settings |
 | `db.js` | Local storage in IndexedDB (works offline) |
 | `sync.js`, `config.js` | Supabase sign-in and sync. The publishable key in `config.js` is safe to commit |
-| `prompts.js` | 60 built-in questions. Questions you add in Settings join the rotation |
+| `prompts.js` | Built-in questions: 60 English, 30 Cantonese, 30 Mandarin. Questions you add in Settings join the rotation |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline cache and Home Screen install |
 | `supabase/schema.sql` | Tables, row-level security and the private `recordings` bucket |
 

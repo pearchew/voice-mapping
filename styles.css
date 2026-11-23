@@ -275,3 +275,17 @@ body.focus-mode .nav { visibility: hidden; }
   z-index: 40;
   animation: settle .2s ease-out;
 }
+
+/* ───────── Chinese text ─────────
+   Fraunces and Literata have no Chinese glyphs; use a matching serif, upright and without the tight tracking. */
+:is(.question, .speak-q, .entry-q, .focus-text, .choices span, .note-line)[lang="zh-HK"] {
+  font-family: 'Noto Serif TC', 'Songti TC', 'PingFang HK', serif;
+}
+:is(.question, .speak-q, .entry-q, .focus-text, .choices span, .note-line)[lang="zh-CN"] {
+  font-family: 'Noto Serif SC', 'Songti SC', 'PingFang SC', serif;
+}
+:is(.question, .speak-q, .entry-q, .focus-text)[lang^="zh"] { font-style: normal; letter-spacing: .02em; line-height: 1.35; }
+
+.lang-switch { margin: -12px 0 8px; }
+.lang-switch legend { margin-bottom: 4px; font: 500 13px/1.4 var(--text); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.entry-edit { display: block; margin: 6px 0 0 56px; padding: 6px 0; font-size: 15px; }

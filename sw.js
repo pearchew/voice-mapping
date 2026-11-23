@@ -1,5 +1,5 @@
 // Offline shell. Bump VERSION whenever app files change.
-const VERSION = 'vm-v4';
+const VERSION = 'vm-v5';
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js', 'db.js', 'sync.js', 'prompts.js', 'config.js',
   'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',

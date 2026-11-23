@@ -44,15 +44,48 @@ function show(name) {
   stopPlayback();
 }
 
+// ───────── Languages ─────────
+const LANGS = {
+  en: { label: 'English', tag: 'en' },
+  yue: { label: '廣東話', tag: 'zh-HK' },
+  cmn: { label: '普通话', tag: 'zh-CN' },
+};
+const BUILTIN = new Map(PROMPTS.map(p => [p.id, p.lang || 'en']));
+// Your own questions carry no language, so guess it from the text.
+function guessLang(text = '') {
+  if (!/[㐀-鿿]/.test(text)) return 'en';
+  return /[嘅咩唔佢喺冇啲嚟咗吓噉嗰]/.test(text) ? 'yue' : 'cmn';
+}
+const langFor = (id, text) => BUILTIN.get(id) || guessLang(text);
+function setText(el, text, lang) {
+  el.textContent = text;
+  el.lang = LANGS[lang]?.tag || 'en';
+}
+async function getLangs() {
+  const l = await db.get('meta', 'langs');
+  return Array.isArray(l) && l.length ? l : ['en'];
+}
+
 // ───────── Prompts ─────────
 async function promptPool() {
   const mine = (await db.all('prompts')).filter(p => !p.deleted).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
-  return [...PROMPTS, ...mine.map(p => ({ id: p.id, cat: 'Yours', text: p.text }))];
+  return [
+    ...PROMPTS.map(p => ({ ...p, lang: p.lang || 'en' })),
+    ...mine.map(p => ({ id: p.id, cat: 'Yours', text: p.text, lang: guessLang(p.text) })),
+  ];
+}
+// The day's language: the one you picked for that day, else an even rotation of the languages you chose.
+async function langForDay(date, langs) {
+  const picked = await db.get('meta', `lang:${date}`);
+  return langs.includes(picked) ? picked : langs[hash(`${date}·lang`) % langs.length];
 }
 async function promptFor(date) {
-  const pool = await promptPool();
+  const lang = await langForDay(date, await getLangs());
+  const all = await promptPool();
+  const pool = all.filter(p => p.lang === lang);
+  const list = pool.length ? pool : all;
   const skips = (await db.get('meta', `skip:${date}`)) || 0;
-  return pool[(hash(date) + skips) % pool.length];
+  return list[(hash(date) + skips) % list.length];
 }
 
 // ───────── Today ─────────
@@ -61,21 +94,40 @@ async function renderToday() {
   const today = todayKey();
   const sessions = await allSessions();
   const done = sessions.find(s => s.date === today);
-  todayPrompt = done ? { id: done.promptId, text: done.promptText, cat: '' } : await promptFor(today);
+  todayPrompt = done
+    ? { id: done.promptId, text: done.promptText, lang: langFor(done.promptId, done.promptText) }
+    : await promptFor(today);
 
   $('today-date').textContent = fmtLong(today);
   $('today-cat').textContent = "Today's question";
-  $('today-question').textContent = todayPrompt.text;
+  setText($('today-question'), todayPrompt.text, todayPrompt.lang);
+
+  // Only offer a language switch when you've chosen more than one.
+  const langs = await getLangs();
+  $('lang-switch').hidden = !!done || langs.length < 2;
+  const group = $('lang-group');
+  group.innerHTML = '';
+  for (const l of langs) {
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="radio" name="today-lang"><span></span>`;
+    const input = label.querySelector('input');
+    input.value = l;
+    input.checked = l === todayPrompt.lang;
+    setText(label.querySelector('span'), LANGS[l].label, l);
+    input.onchange = async () => { await db.put('meta', l, `lang:${today}`); renderToday(); };
+    group.append(label);
+  }
 
   const prev = sessions.find(s => s.date < today && s.note && s.note.trim());
   $('focus-block').hidden = !prev;
-  if (prev) $('focus-text').textContent = prev.note;
+  if (prev) setText($('focus-text'), prev.note, guessLang(prev.note));
 
   $('today-todo').hidden = !!done;
   $('today-done').hidden = !done;
   if (done) {
     $('today-note').textContent = done.note ? `Tomorrow: ${done.note}` : '';
     $('today-play').onclick = (e) => playSession(done, e.currentTarget);
+    $('edit-today-btn').onclick = () => editEntry(done, 'today');
   }
 }
 
@@ -87,7 +139,7 @@ $('skip-btn').onclick = async () => {
 
 // ───────── Recording ─────────
 let stream = null, recorder = null, chunks = [], recStart = 0, raf = 0, cancelled = false;
-let take = null; // { blob, seconds }
+let rev = null; // what the review screen is showing: { date, prompt, blob, seconds, session?, back? }
 
 function pickMime() {
   if (!window.MediaRecorder) return '';
@@ -111,7 +163,7 @@ async function begin() {
     return;
   }
   cancelled = false;
-  $('speak-question').textContent = todayPrompt.text;
+  setText($('speak-question'), todayPrompt.text, todayPrompt.lang);
   show('ready');
   for (let n = 3; n > 0; n--) {
     $('count').textContent = n;
@@ -162,12 +214,30 @@ function stopRecording() {
 async function onRecorded() {
   releaseMic();
   const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'audio/mp4' });
-  take = { blob, seconds: recSeconds };
-  document.querySelectorAll('#s-review input, [data-screen="review"] input').forEach(i => { i.checked = false; });
-  $('note-input').value = '';
-  $('note-hint').textContent = 'Just one thing.';
-  renderReview();
+  rev = { date: todayKey(), prompt: todayPrompt, blob, seconds: recSeconds, session: null };
+  fillReview(null);
+  await renderReview();
   show('review');
+}
+
+// Reopen a saved entry on the review screen, so its checks and note can be changed.
+async function editEntry(s, back) {
+  rev = {
+    date: s.date,
+    prompt: { id: s.promptId, text: s.promptText, lang: langFor(s.promptId, s.promptText) },
+    blob: (await db.get('audio', s.date)) || null,
+    seconds: 0, session: s, back,
+  };
+  fillReview(s);
+  await renderReview();
+  show('review');
+}
+function fillReview(s) {
+  document.querySelectorAll('[data-screen="review"] input[type="radio"]').forEach(i => {
+    i.checked = !!s && String(s[i.name] ?? '') === i.value;
+  });
+  $('note-input').value = s?.note ?? '';
+  $('note-hint').textContent = 'Just one thing.';
 }
 
 $('begin-btn').onclick = begin;
@@ -252,25 +322,35 @@ async function playSession(s, btn, opts = {}) {
 
 // ───────── Review ─────────
 async function renderReview() {
-  $('review-question').textContent = todayPrompt.text;
-  $('review-time').textContent = fmtTime(take.seconds);
+  const editing = !!rev.session;
+  $('review-kicker').textContent = editing ? `Editing ${fmtLong(rev.date)}` : 'Listening back to';
+  setText($('review-question'), rev.prompt.text, rev.prompt.lang);
+  $('review-time').textContent = fmtTime(rev.seconds);
   setScrub(0);
-  const today = todayKey();
-  const prev = (await allSessions()).find(s => s.date < today && s.note && s.note.trim());
+  $('save-btn').textContent = editing ? 'Save changes' : 'Keep this entry';
+  $('retake-btn').hidden = editing;
+  $('cancel-edit').hidden = !editing;
+  const prev = (await allSessions()).find(s => s.date < rev.date && s.note && s.note.trim());
   $('review-focus').hidden = !prev;
-  if (prev) $('review-focus-text').textContent = prev.note;
+  if (prev) setText($('review-focus-text'), prev.note, guessLang(prev.note));
 }
 function setScrub(frac) {
   $('scrub-fill').style.width = `${Math.min(100, Math.max(0, frac * 100))}%`;
   $('review-scrub').setAttribute('aria-valuenow', Math.round(frac * 100));
 }
 const reviewProgress = (t, d) => { setScrub(d ? t / d : 0); $('review-time').textContent = fmtTime(t || 0); };
-const playTake = (from = null) => play(take.blob, $('review-play'), { dur: take.seconds, from, progress: reviewProgress });
+async function playTake(from = null) {
+  const btn = $('review-play');
+  if (!rev.blob && rev.session) rev.blob = await blobFor(rev.session, btn);
+  if (!rev.blob) return;
+  play(rev.blob, btn, { dur: rev.seconds, from, progress: reviewProgress });
+}
 $('review-play').onclick = () => playTake();
-$('ending-btn').onclick = () => playTake(Math.max(0, (duration() || take.seconds) - 10));
+$('ending-btn').onclick = () => playTake(Math.max(0, (duration() || rev.seconds) - 10));
 $('review-scrub').addEventListener('click', (e) => {
   const r = e.currentTarget.getBoundingClientRect();
-  playTake(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * (duration() || take.seconds));
+  const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  playTake(frac * (duration() || rev.seconds));
 });
 $('review-scrub').addEventListener('keydown', (e) => {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -278,19 +358,37 @@ $('review-scrub').addEventListener('keydown', (e) => {
   playTake(Math.max(0, audio.currentTime + (e.key === 'ArrowRight' ? 5 : -5)));
 });
 
+async function leaveEdit() {
+  const back = rev.back || 'history';
+  if (back === 'history') await renderHistory(); else await renderToday();
+  show(back);
+}
+$('cancel-edit').onclick = leaveEdit;
+
 $('save-btn').onclick = async () => {
   const note = $('note-input').value.trim();
   if (!note) { $('note-hint').textContent = 'Write one small thing. You’ll see it tomorrow.'; $('note-input').focus(); return; }
-  const date = todayKey();
   const finished = document.querySelector('input[name="finished"]:checked')?.value ?? null;
   const presence = Number(document.querySelector('input[name="presence"]:checked')?.value) || null;
+  const { date } = rev;
   const prev = await db.get('sessions', date);
-  await db.put('audio', take.blob, date);
+  const now = new Date().toISOString();
+
+  if (rev.session) {
+    // Editing keeps the recording as it is; only the checks and the note change.
+    await db.put('sessions', { ...(prev || rev.session), finished, presence, note, updatedAt: now, synced: false });
+    toast('Entry updated.');
+    await leaveEdit();
+    sync.sync();
+    return;
+  }
+
+  await db.put('audio', rev.blob, date);
   await db.put('sessions', {
-    date, promptId: todayPrompt.id, promptText: todayPrompt.text,
+    date, promptId: rev.prompt.id, promptText: rev.prompt.text,
     finished, presence, note,
-    audioPath: prev?.audioPath ?? null, audioType: take.blob.type,
-    updatedAt: new Date().toISOString(),
+    audioPath: prev?.audioPath ?? null, audioType: rev.blob.type,
+    updatedAt: now,
     synced: false, audioDirty: true,
   });
   $('done-note').textContent = `Tomorrow: ${note}`;
@@ -325,9 +423,10 @@ function entryCard(s) {
       </div>
     </div>
     <div class="entry-tags"></div>
-    <p class="entry-note"></p>`;
+    <p class="entry-note"></p>
+    <button class="link entry-edit">Edit</button>`;
   li.querySelector('.entry-date').textContent = fmtShort(s.date);
-  li.querySelector('.entry-q').textContent = s.promptText;
+  setText(li.querySelector('.entry-q'), s.promptText, langFor(s.promptId, s.promptText));
   const tags = li.querySelector('.entry-tags');
   const tag = (text) => { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; tags.append(t); };
   if (s.finished) tag(FINISHED_LABEL[s.finished]);
@@ -337,6 +436,9 @@ function entryCard(s) {
   if (s.note) note.textContent = `Tomorrow: ${s.note}`; else note.remove();
   const btn = li.querySelector('.play');
   btn.onclick = () => playSession(s, btn);
+  const edit = li.querySelector('.entry-edit');
+  edit.setAttribute('aria-label', `Edit the entry for ${fmtLong(s.date)}`);
+  edit.onclick = () => editEntry(s, 'history');
   return li;
 }
 
@@ -360,6 +462,19 @@ function setSyncUI(state, detail) {
 }
 sync.onStatus(setSyncUI);
 
+async function renderLangs() {
+  const langs = await getLangs();
+  document.querySelectorAll('#lang-choices input').forEach(i => { i.checked = langs.includes(i.value); });
+}
+document.querySelectorAll('#lang-choices input').forEach(i => {
+  i.onchange = async () => {
+    const chosen = [...document.querySelectorAll('#lang-choices input:checked')].map(x => x.value);
+    if (!chosen.length) { i.checked = true; toast('Keep at least one language.'); return; }
+    await db.put('meta', chosen, 'langs');
+    toast('Language choice saved.');
+  };
+});
+
 async function renderMine() {
   const mine = (await db.all('prompts')).filter(p => !p.deleted);
   const ul = $('my-prompts');
@@ -379,7 +494,7 @@ document.querySelectorAll('.nav-item').forEach(b => {
     const to = b.dataset.nav;
     if (to === 'today') await renderToday();
     if (to === 'history') await renderHistory();
-    if (to === 'settings') await renderMine();
+    if (to === 'settings') { await renderMine(); await renderLangs(); }
     show(to);
   };
 });
